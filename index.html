@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+
+<div id="map" style="height: 400px;"></div>
+<button onclick="getSelectedLocations()">Get Selected Locations</button>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    var map = L.map('map').setView([0, 0], 2);
+    var selectedLocations = [];
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    map.on('click', function (e) {
+        var lat = e.latlng.lat;
+        var lon = e.latlng.lng;
+
+        // Add the selected location to the array
+        selectedLocations.push({ lat, lon });
+
+        // Add a marker to indicate the selected location
+        L.marker([lat, lon]).addTo(map);
+    });
+
+    function getSelectedLocations() {
+        // Send selected locations to the backend using fetch
+        fetch('/send_selected_locations/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'  // Add Django CSRF token if needed
+            },
+            body: JSON.stringify({ locations: selectedLocations }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            // You can handle the response here if needed
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+
+</body>
+</html>
