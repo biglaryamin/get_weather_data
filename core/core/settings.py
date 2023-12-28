@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-5f6$6hx^!w@v!o59xzuy*l!)lud!vap(7d3e^rlhrpfskr7&rj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['0.0.0.0','127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -39,6 +39,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'corsheaders',
+]
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",  # Add the origin of your frontend application
 ]
 
 MIDDLEWARE = [
@@ -126,9 +132,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ]
+    'DEFAULT_PERMISSION_CLASSES': (
+        # 'rest_framework.permissions.DjangoModelPermissions',
+    )
 }

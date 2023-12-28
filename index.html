@@ -12,6 +12,7 @@
 <button onclick="getSelectedLocations()">Get Selected Locations</button>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
     var map = L.map('map').setView([0, 0], 2);
     var selectedLocations = [];
@@ -32,21 +33,13 @@
     });
 
     function getSelectedLocations() {
-        // Send selected locations to the backend using fetch
-        fetch('/send_selected_locations/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'  // Add Django CSRF token if needed
-            },
-            body: JSON.stringify({ locations: selectedLocations }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log(data);
-            // You can handle the response here if needed
-        })
-        .catch(error => console.error('Error:', error));
+        // Send selected locations to the backend using axios
+        axios.post('/api/locations/', { locations: selectedLocations })
+            .then(response => {
+                console.log(response.data);
+                // You can handle the response here if needed
+            })
+            .catch(error => console.error('Error:', error));
     }
 </script>
 
