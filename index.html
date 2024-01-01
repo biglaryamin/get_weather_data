@@ -4,20 +4,42 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Send POST Request</title>
+  <title>Leaflet Map with Post Request</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 400px;
+    }
+  </style>
 </head>
 <body>
+  <div id="map"></div>
   <button onclick="sendPostRequest()">Send POST Request</button>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script>
-    function sendPostRequest() {
-      const locations = [
-        { lat: 12.34, lng: 56.78 },
-        { lat: 23.45, lng: 67.89 },
-        // Add more locations as needed
-      ];
+    var map = L.map('map').setView([0, 0], 2);
+    var selectedLocations = [];
 
-      axios.post('http://127.0.0.1:8000/hello/', { locations })
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    map.on('click', function (e) {
+      var lat = e.latlng.lat;
+      var lng = e.latlng.lng;
+
+      // Add the selected location to the array
+      selectedLocations.push({ lat, lng });
+
+      // Add a marker to indicate the selected location
+      L.marker([lat, lng]).addTo(map);
+    });
+
+    function sendPostRequest() {
+      // Send selected locations to the backend using axios
+      axios.post('http://127.0.0.1:8000/hello/', { locations: selectedLocations })
         .then(response => {
           alert('Response: ' + JSON.stringify(response.data));
           // You can handle the response here if needed
