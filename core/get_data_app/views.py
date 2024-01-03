@@ -35,16 +35,27 @@ def hello_world(request):
             processed_data.append({'lat': lat, 'lng': lng, 'weather_data': weather_data})
 
         return Response({'message': 'Locations received and processed successfully', 'data': processed_data}, status=status.HTTP_200_OK)
-
+    
 def get_weather_data(lat, lng):
     try:
-        # Make sure all required weather variables are listed here
-        # The order of variables in hourly or daily is important to assign them correctly below
+        # Specify the additional weather variables you want
+        additional_variables = [
+            "relative_humidity_2m",
+            "dewpoint_2m",
+            # Add other variables as needed
+        ]
+
+        # Construct the list of hourly variables
+        hourly_variables = ["temperature_2m"] + additional_variables
+
+        # Add the hourly variables to the params dictionary
         params = {
             "latitude": lat,
             "longitude": lng,
-            "hourly": "temperature_2m"
+            "hourly": hourly_variables
         }
+
+        # Make the API request
         responses = openmeteo.weather_api("https://api.open-meteo.com/v1/forecast", params=params)
 
         # Process first location. Add a for-loop for multiple locations or weather models
@@ -52,18 +63,21 @@ def get_weather_data(lat, lng):
 
         # Process hourly data. The order of variables needs to be the same as requested.
         hourly = response.Hourly()
-        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
 
-        hourly_data = {"date": pd.date_range(
-            start=pd.to_datetime(hourly.Time(), unit="s"),
-            end=pd.to_datetime(hourly.TimeEnd(), unit="s"),
-            freq=pd.Timedelta(seconds=hourly.Interval()),
-            inclusive="left"
-        )}
-        hourly_data["temperature_2m"] = hourly_temperature_2m
+        # Create a dictionary to store the data for each variable
+        variable_data = {"date": pd.to_datetime(hourly.Time(), unit="s")}
 
-        hourly_dataframe = pd.DataFrame(data=hourly_data)
-        return hourly_dataframe.to_dict(orient='records')
+        for variable in hourly_variables:
+            variable_values = hourly.VariablesByName(variable).ValuesAsNumpy()
+            variable_data[variable] = variable_values
+
+        # Create a DataFrame from the variable data
+        variable_dataframe = pd.DataFrame(data=variable_data)
+
+        # Combine the data from different variables into a single DataFrame
+        result_dataframe = pd.concat([variable_dataframe], axis=1)
+
+        return result_dataframe.to_dict(orient='records')
 
     except Exception as e:
         print(f'Error retrieving weather data: {e}')
