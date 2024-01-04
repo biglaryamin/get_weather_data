@@ -88,4 +88,8 @@ local_settings.py
 .env
 db.sqlite3
 
+# Excel files
+*.xlsx
+
+
 .cache.sqlite
