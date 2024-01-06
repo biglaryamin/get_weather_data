@@ -40,10 +40,11 @@ def get_weather_data(lat, lng):
     try:
         # Make sure all required weather variables are listed here
         # The order of variables in hourly or daily is important to assign them correctly below
+
         params = {
             "latitude": lat,
             "longitude": lng,
-            "hourly": "temperature_2m"
+            "hourly": ["temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature", "precipitation_probability", "precipitation", "rain"]
         }
         responses = openmeteo.weather_api("https://api.open-meteo.com/v1/forecast", params=params)
 
@@ -53,6 +54,13 @@ def get_weather_data(lat, lng):
         # Process hourly data. The order of variables needs to be the same as requested.
         hourly = response.Hourly()
         hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+        hourly_relative_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
+        hourly_dew_point_2m = hourly.Variables(2).ValuesAsNumpy()
+        hourly_apparent_temperature = hourly.Variables(3).ValuesAsNumpy()
+        hourly_precipitation_probability = hourly.Variables(4).ValuesAsNumpy()
+        hourly_precipitation = hourly.Variables(5).ValuesAsNumpy()
+        hourly_rain = hourly.Variables(6).ValuesAsNumpy()
+
 
         hourly_data = {"date": pd.date_range(
             start=pd.to_datetime(hourly.Time(), unit="s"),
@@ -61,6 +69,13 @@ def get_weather_data(lat, lng):
             inclusive="left"
         )}
         hourly_data["temperature_2m"] = hourly_temperature_2m
+        hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
+        hourly_data["dew_point_2m"] = hourly_dew_point_2m
+        hourly_data["apparent_temperature"] = hourly_apparent_temperature
+        hourly_data["precipitation_probability"] = hourly_precipitation_probability
+        hourly_data["precipitation"] = hourly_precipitation
+        hourly_data["rain"] = hourly_rain
+
 
         hourly_dataframe = pd.DataFrame(data=hourly_data)
         return hourly_dataframe.to_dict(orient='records')
@@ -68,14 +83,17 @@ def get_weather_data(lat, lng):
     except Exception as e:
         print(f'Error retrieving weather data: {e}')
         return None
-
+    
 def save_to_excel(weather_data, lat, lng):
     try:
         # Create a Pandas DataFrame from the weather data
         df = pd.DataFrame(weather_data)
-
+        print("************ file saving started ***************")
+        location = f"{lat}, {lng}"
+        df['location'] = location
+        print(f"***********{location}***********")
         # Define the file path where you want to save the Excel file
-        file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/weather_data_{lat}_{lng}.xlsx'
+        file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{lat}_{lng}.xlsx'
 
         # Save the DataFrame to an Excel file
         df.to_excel(file_path, index=False)
