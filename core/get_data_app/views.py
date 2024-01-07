@@ -7,8 +7,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
+import os
+
 # Setup the Open-Meteo API client with cache and retry on error
 openmeteo = openmeteo_requests.Client()
+
 
 @api_view(['GET', 'POST'])
 def hello_world(request):
@@ -19,7 +22,7 @@ def hello_world(request):
         received_data = request.data.get('locations', [])
 
         # Process the received locations as needed
-        processed_data = []
+        processed_data = {}
         for location in received_data:
             lat = location.get('lat')
             lng = location.get('lng')
@@ -29,12 +32,11 @@ def hello_world(request):
 
             # Add your custom logic here to save weather_data to the database
             # For demonstration purposes, save the weather_data to an Excel file
-            save_to_excel(weather_data, lat, lng)
+            save_to_excel(weather_data, lat, lng, processed_data)
 
-            # Add the processed location and weather data to the list
-            processed_data.append({'lat': lat, 'lng': lng, 'weather_data': weather_data})
-
+        seperate_excel_files()
         return Response({'message': 'Locations received and processed successfully', 'data': processed_data}, status=status.HTTP_200_OK)
+
 
 def get_weather_data(lat, lng):
     try:
@@ -84,21 +86,72 @@ def get_weather_data(lat, lng):
         print(f'Error retrieving weather data: {e}')
         return None
     
-def save_to_excel(weather_data, lat, lng):
+
+def save_to_excel(weather_data, lat, lng, processed_data):
     try:
         # Create a Pandas DataFrame from the weather data
         df = pd.DataFrame(weather_data)
-        print("************ file saving started ***************")
         location = f"{lat}, {lng}"
         df['location'] = location
-        print(f"***********{location}***********")
-        # Define the file path where you want to save the Excel file
-        file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{lat}_{lng}.xlsx'
+
+        # Get the layer name from the DataFrame (assuming the first column is the layer name)
+        layer_name = df.columns[0]
+
+        # Define the file path where you want to save the Excel file based on the layer name
+        file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{layer_name}.xlsx'
 
         # Save the DataFrame to an Excel file
-        df.to_excel(file_path, index=False)
+        if os.path.exists(file_path):
+            # If the file already exists, append the data to the existing file
+            existing_df = pd.read_excel(file_path)
+            updated_df = pd.concat([existing_df, df], ignore_index=True)
+            updated_df.to_excel(file_path, index=False)
+        else:
+            # If the file does not exist, create a new file
+            df.to_excel(file_path, index=False)
 
         print(f'Data saved to Excel file: {file_path}')
 
+        # Update the processed_data dictionary
+        if layer_name not in processed_data:
+            processed_data[layer_name] = []
+        processed_data[layer_name].append({'lat': lat, 'lng': lng, 'location': location})
+
     except Exception as e:
         print(f'Error saving data to Excel: {e}')
+
+
+def seperate_excel_files():
+    excel_file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/date.xlsx'
+    df = pd.read_excel(excel_file_path)
+
+    file1 = df.iloc[:, [0, 1, -1]]
+    file1["unit"] = "°C"
+    file1.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/temperature_2m.xlsx', index=False)
+
+    file2 = df.iloc[:, [0, 2, -1]]
+    file2["unit"] = "%"
+    file2.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/relative_humidity_2m.xlsx', index=False)
+
+
+    file3 = df.iloc[:, [0, 3, -1]]
+    file3["unit"] = "°C"
+    file3.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/dew_point_2m.xlsx', index=False)
+
+    file4 = df.iloc[:, [0, 4, -1]]
+    file4["unit"] = "°C"
+    file4.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/apparent_temperature.xlsx', index=False)
+
+    file5 = df.iloc[:, [0, 5, -1]]
+    file5["unit"] = "mm"
+    file5.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/precipitation_probability.xlsx', index=False)
+
+
+    file6 = df.iloc[:, [0, 6, -1]]
+    file6["unit"] = "mm"
+    file6.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/precipitation.xlsx', index=False)
+
+
+    file7 = df.iloc[:, [0, 7, -1]]
+    file7["unit"] = "mm"
+    file7.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/rain.xlsx', index=False)
