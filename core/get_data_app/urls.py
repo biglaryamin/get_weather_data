@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import hello_world
+from .views import handle_weather_request
 from rest_framework.routers import DefaultRouter
 
 # from .views import LocationViewSet
@@ -8,5 +8,5 @@ from rest_framework.routers import DefaultRouter
 # router.register(r'locations', LocationViewSet, basename='locations')
 
 urlpatterns = [
-    path("hello/", hello_world, name="hello_world"),
+    path("main/", handle_weather_request, name="handle_weather_request"),
 ]

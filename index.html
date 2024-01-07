@@ -39,7 +39,7 @@
 
     function sendPostRequest() {
       // Send selected locations to the backend using axios
-      axios.post('http://127.0.0.1:8000/hello/', { locations: selectedLocations })
+      axios.post('http://127.0.0.1:8000/main/', { locations: selectedLocations })
         .then(response => {
           alert('Response: ' + JSON.stringify(response.data));
           // You can handle the response here if needed

@@ -14,7 +14,7 @@ openmeteo = openmeteo_requests.Client()
 
 
 @api_view(['GET', 'POST'])
-def hello_world(request):
+def handle_weather_request(request):
     if request.method == 'GET':
         data = {'message': 'Hello, World'}
         return JsonResponse(data)
