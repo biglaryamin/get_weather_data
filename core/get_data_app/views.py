@@ -1,8 +1,10 @@
 import openmeteo_requests
 import pandas as pd
 from pprint import pprint
+import numpy as np
 
 from django.http import JsonResponse
+from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,9 +22,12 @@ def handle_weather_request(request):
         return JsonResponse(data)
     elif request.method == 'POST':
         received_data = request.data.get('locations', [])
-
+        print(f"************{tuple(received_data[0].values())}**************")
         # Process the received locations as needed
         processed_data = {}
+        grid_points = generate_points(received_data[0].values(), received_data[1].values(), 1000)
+        
+        print(f"**********{grid_points}***********")
         for location in received_data:
             lat = location.get('lat')
             lng = location.get('lng')
@@ -36,6 +41,20 @@ def handle_weather_request(request):
 
         seperate_excel_files()
         return Response({'message': 'Locations received and processed successfully', 'data': processed_data}, status=status.HTTP_200_OK)
+
+
+def generate_points(point1, point2, resolution):
+    x_min, y_min = np.min([point1, point2], axis=0)
+    x_max, y_max = np.max([point1, point2], axis=0)
+    x = np.linspace(x_min, x_max, resolution)
+    y = np.linspace(y_min, y_max, resolution)
+
+    xv, yv = np.meshgrid(x, y)
+    points = np.column_stack((xv.flatten(), yv.flatten()))
+    # output_file = "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/log.csv"
+    # points.to_csv(output_file, index=False)
+    return points
+
 
 
 def get_weather_data(lat, lng):
