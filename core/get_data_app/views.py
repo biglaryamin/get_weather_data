@@ -6,6 +6,7 @@ import os
 
 from django.http import JsonResponse
 from django.http import HttpResponse
+from .models import WeatherEntry
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,7 +19,6 @@ import logging
 logging.basicConfig(filename='/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/logfile.log', level=logging.ERROR)
 
 
-
 # Setup the Open-Meteo API client with cache and retry on error
 openmeteo = openmeteo_requests.Client()
 
@@ -29,20 +29,27 @@ def handle_weather_request(request):
         data = {'message': 'Hello, World'}
         return JsonResponse(data)
     elif request.method == 'POST':
-        # print("starting...")
         received_data = request.data.get('locations', [])
         processed_data = {}
+        received_lat = received_data[0].get('lat')
+        received_lng = received_data[0].get('lng')
 
-        # Generate grid points
-        grid_points = generate_points((30.977609093348686, 49.74609375000001), (35.60371874069731, 54.40429687500001), 5)
-        # print("grid created...")
 
-        # Use tqdm for the progress bar
+        received_lat1 = received_data[1].get('lat')
+        received_lng1 = received_data[1].get('lng')
+
+        # Create a tuple
+        coordinate_tuple = (received_lat, received_lng)
+        coordinate_tuple1 = (received_lat1, received_lng1)
+
+        grid_points = generate_points(coordinate_tuple, coordinate_tuple1, 5)
+
         for lat, lng in tqdm(grid_points, desc="Fetching data", unit="location"):
             weather_data = get_weather_data(lat, lng)
 
             if weather_data:
                 save_to_excel(weather_data, lat, lng, processed_data)
+                save_to_database(weather_data, lat, lng)  # Call the save_to_database function
 
         seperate_excel_files()
         return Response({'message': 'Locations received and processed successfully', 'data': processed_data}, status=status.HTTP_200_OK)
@@ -179,3 +186,15 @@ def seperate_excel_files():
     file7 = df.iloc[:, [0, 7, -1]]
     file7["unit"] = "mm"
     file7.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/rain.xlsx', index=False)
+
+
+
+def save_to_database(weather_data, lat, lng):
+    try:
+        # Iterate through the weather data and save entries to the database
+        for entry in weather_data:
+            for key, value in entry.items():
+                if key != 'date' and key != 'location':
+                    WeatherEntry.objects.create(layer_name=key, value=value, latitude=lat, longitude=lng)
+    except Exception as e:
+        logging.error(f'Error saving data to database: {e}')
