@@ -14,6 +14,7 @@
 </head>
 <body>
   <div id="map"></div>
+  <div id="coordinates"></div>
   <button onclick="sendPostRequest()">Send POST Request</button>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -29,6 +30,9 @@
     map.on('click', function (e) {
       var lat = e.latlng.lat;
       var lng = e.latlng.lng;
+
+      // Display the coordinates
+      document.getElementById('coordinates').innerHTML = `Latitude: ${lat}, Longitude: ${lng}`;
 
       // Add the selected location to the array
       selectedLocations.push({ lat, lng });

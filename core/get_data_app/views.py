@@ -2,6 +2,7 @@ import openmeteo_requests
 import pandas as pd
 from pprint import pprint
 import numpy as np
+import os
 
 from django.http import JsonResponse
 from django.http import HttpResponse
@@ -9,7 +10,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-import os
+from tqdm import tqdm
 
 # Setup the Open-Meteo API client with cache and retry on error
 openmeteo = openmeteo_requests.Client()
@@ -21,27 +22,23 @@ def handle_weather_request(request):
         data = {'message': 'Hello, World'}
         return JsonResponse(data)
     elif request.method == 'POST':
+        # print("starting...")
         received_data = request.data.get('locations', [])
-        print(f"************{tuple(received_data[0].values())}**************")
-        # Process the received locations as needed
         processed_data = {}
-        grid_points = generate_points(received_data[0].values(), received_data[1].values(), 1000)
-        
-        print(f"**********{grid_points}***********")
-        for location in received_data:
-            lat = location.get('lat')
-            lng = location.get('lng')
 
-            # Retrieve weather data from OpenMeteo API
+        # Generate grid points
+        grid_points = generate_points((30.977609093348686, 49.74609375000001), (35.60371874069731, 54.40429687500001), 10)
+        # print("grid created...")
+
+        # Use tqdm for the progress bar
+        for lat, lng in tqdm(grid_points, desc="Fetching data", unit="location"):
             weather_data = get_weather_data(lat, lng)
 
-            # Add your custom logic here to save weather_data to the database
-            # For demonstration purposes, save the weather_data to an Excel file
-            save_to_excel(weather_data, lat, lng, processed_data)
+            if weather_data:
+                save_to_excel(weather_data, lat, lng, processed_data)
 
         seperate_excel_files()
         return Response({'message': 'Locations received and processed successfully', 'data': processed_data}, status=status.HTTP_200_OK)
-
 
 def generate_points(point1, point2, resolution):
     x_min, y_min = np.min([point1, point2], axis=0)
@@ -102,7 +99,7 @@ def get_weather_data(lat, lng):
         return hourly_dataframe.to_dict(orient='records')
 
     except Exception as e:
-        print(f'Error retrieving weather data: {e}')
+        # print(f'Error retrieving weather data: {e}')
         return None
     
 
@@ -129,7 +126,7 @@ def save_to_excel(weather_data, lat, lng, processed_data):
             # If the file does not exist, create a new file
             df.to_excel(file_path, index=False)
 
-        print(f'Data saved to Excel file: {file_path}')
+        # print(f'Data saved to Excel file: {file_path}')
 
         # Update the processed_data dictionary
         if layer_name not in processed_data:
@@ -137,7 +134,8 @@ def save_to_excel(weather_data, lat, lng, processed_data):
         processed_data[layer_name].append({'lat': lat, 'lng': lng, 'location': location})
 
     except Exception as e:
-        print(f'Error saving data to Excel: {e}')
+        # print(f'Error saving data to Excel: {e}')
+        None
 
 
 def seperate_excel_files():
