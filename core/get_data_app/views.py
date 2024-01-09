@@ -12,6 +12,13 @@ from rest_framework import status
 
 from tqdm import tqdm
 
+
+import logging
+
+logging.basicConfig(filename='/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/logfile.log', level=logging.ERROR)
+
+
+
 # Setup the Open-Meteo API client with cache and retry on error
 openmeteo = openmeteo_requests.Client()
 
@@ -27,7 +34,7 @@ def handle_weather_request(request):
         processed_data = {}
 
         # Generate grid points
-        grid_points = generate_points((30.977609093348686, 49.74609375000001), (35.60371874069731, 54.40429687500001), 10)
+        grid_points = generate_points((30.977609093348686, 49.74609375000001), (35.60371874069731, 54.40429687500001), 5)
         # print("grid created...")
 
         # Use tqdm for the progress bar
@@ -48,16 +55,12 @@ def generate_points(point1, point2, resolution):
 
     xv, yv = np.meshgrid(x, y)
     points = np.column_stack((xv.flatten(), yv.flatten()))
-    # output_file = "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/log.csv"
-    # points.to_csv(output_file, index=False)
     return points
 
 
 
 def get_weather_data(lat, lng):
     try:
-        # Make sure all required weather variables are listed here
-        # The order of variables in hourly or daily is important to assign them correctly below
 
         params = {
             "latitude": lat,
@@ -66,10 +69,8 @@ def get_weather_data(lat, lng):
         }
         responses = openmeteo.weather_api("https://api.open-meteo.com/v1/forecast", params=params)
 
-        # Process first location. Add a for-loop for multiple locations or weather models
         response = responses[0]
 
-        # Process hourly data. The order of variables needs to be the same as requested.
         hourly = response.Hourly()
         hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
         hourly_relative_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
@@ -116,26 +117,32 @@ def save_to_excel(weather_data, lat, lng, processed_data):
         # Define the file path where you want to save the Excel file based on the layer name
         file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{layer_name}.xlsx'
 
-        # Save the DataFrame to an Excel file
+        # Save the DataFrame to an Excel file with improved error handling
         if os.path.exists(file_path):
-            # If the file already exists, append the data to the existing file
-            existing_df = pd.read_excel(file_path)
-            updated_df = pd.concat([existing_df, df], ignore_index=True)
-            updated_df.to_excel(file_path, index=False)
+            try:
+                # If the file already exists, append the data to the existing file
+                existing_df = pd.read_excel(file_path)
+                updated_df = pd.concat([existing_df, df], ignore_index=True)
+                updated_df.to_excel(file_path, index=False)
+            except Exception as save_error:
+                logging.error(f'Error appending data to Excel file: {save_error}')
         else:
-            # If the file does not exist, create a new file
-            df.to_excel(file_path, index=False)
-
-        # print(f'Data saved to Excel file: {file_path}')
+            try:
+                # If the file does not exist, create a new file
+                df.to_excel(file_path, index=False)
+            except Exception as save_error:
+                logging.error(f'Error creating new Excel file: {save_error}')
 
         # Update the processed_data dictionary
         if layer_name not in processed_data:
             processed_data[layer_name] = []
         processed_data[layer_name].append({'lat': lat, 'lng': lng, 'location': location})
 
+        print(f'Data saved to Excel file: {file_path}')
+
     except Exception as e:
-        # print(f'Error saving data to Excel: {e}')
-        None
+        logging.error(f'Error saving data to Excel: {e}')
+        # You may choose to raise the exception or handle it in a way that suits your needs
 
 
 def seperate_excel_files():
