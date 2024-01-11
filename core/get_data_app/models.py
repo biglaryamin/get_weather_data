@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class WeatherEntry(models.Model):
     layer_name = models.CharField(max_length=300, verbose_name="Layer Name")
     value = models.FloatField()

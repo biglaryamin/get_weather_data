@@ -16,27 +16,29 @@ from tqdm import tqdm
 
 import logging
 
-logging.basicConfig(filename='/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/logfile.log', level=logging.ERROR)
+logging.basicConfig(
+    filename="/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/logfile.log",
+    level=logging.ERROR,
+)
 
 
 # Setup the Open-Meteo API client with cache and retry on error
 openmeteo = openmeteo_requests.Client()
 
 
-@api_view(['GET', 'POST'])
+@api_view(["GET", "POST"])
 def handle_weather_request(request):
-    if request.method == 'GET':
-        data = {'message': 'Hello, World'}
+    if request.method == "GET":
+        data = {"message": "Hello, World"}
         return JsonResponse(data)
-    elif request.method == 'POST':
-        received_data = request.data.get('locations', [])
+    elif request.method == "POST":
+        received_data = request.data.get("locations", [])
         processed_data = {}
-        received_lat = received_data[0].get('lat')
-        received_lng = received_data[0].get('lng')
+        received_lat = received_data[0].get("lat")
+        received_lng = received_data[0].get("lng")
 
-
-        received_lat1 = received_data[1].get('lat')
-        received_lng1 = received_data[1].get('lng')
+        received_lat1 = received_data[1].get("lat")
+        received_lng1 = received_data[1].get("lng")
 
         # Create a tuple
         coordinate_tuple = (received_lat, received_lng)
@@ -49,10 +51,19 @@ def handle_weather_request(request):
 
             if weather_data:
                 save_to_excel(weather_data, lat, lng, processed_data)
-                save_to_database(weather_data, lat, lng)  # Call the save_to_database function
+                save_to_database(
+                    weather_data, lat, lng
+                )  # Call the save_to_database function
 
         seperate_excel_files()
-        return Response({'message': 'Locations received and processed successfully', 'data': processed_data}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": "Locations received and processed successfully",
+                "data": processed_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 def generate_points(point1, point2, resolution):
     x_min, y_min = np.min([point1, point2], axis=0)
@@ -65,16 +76,24 @@ def generate_points(point1, point2, resolution):
     return points
 
 
-
 def get_weather_data(lat, lng):
     try:
-
         params = {
             "latitude": lat,
             "longitude": lng,
-            "hourly": ["temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature", "precipitation_probability", "precipitation", "rain"]
+            "hourly": [
+                "temperature_2m",
+                "relative_humidity_2m",
+                "dew_point_2m",
+                "apparent_temperature",
+                "precipitation_probability",
+                "precipitation",
+                "rain",
+            ],
         }
-        responses = openmeteo.weather_api("https://api.open-meteo.com/v1/forecast", params=params)
+        responses = openmeteo.weather_api(
+            "https://api.open-meteo.com/v1/forecast", params=params
+        )
 
         response = responses[0]
 
@@ -87,13 +106,14 @@ def get_weather_data(lat, lng):
         hourly_precipitation = hourly.Variables(5).ValuesAsNumpy()
         hourly_rain = hourly.Variables(6).ValuesAsNumpy()
 
-
-        hourly_data = {"date": pd.date_range(
-            start=pd.to_datetime(hourly.Time(), unit="s"),
-            end=pd.to_datetime(hourly.TimeEnd(), unit="s"),
-            freq=pd.Timedelta(seconds=hourly.Interval()),
-            inclusive="left"
-        )}
+        hourly_data = {
+            "date": pd.date_range(
+                start=pd.to_datetime(hourly.Time(), unit="s"),
+                end=pd.to_datetime(hourly.TimeEnd(), unit="s"),
+                freq=pd.Timedelta(seconds=hourly.Interval()),
+                inclusive="left",
+            )
+        }
         hourly_data["temperature_2m"] = hourly_temperature_2m
         hourly_data["relative_humidity_2m"] = hourly_relative_humidity_2m
         hourly_data["dew_point_2m"] = hourly_dew_point_2m
@@ -102,27 +122,26 @@ def get_weather_data(lat, lng):
         hourly_data["precipitation"] = hourly_precipitation
         hourly_data["rain"] = hourly_rain
 
-
         hourly_dataframe = pd.DataFrame(data=hourly_data)
-        return hourly_dataframe.to_dict(orient='records')
+        return hourly_dataframe.to_dict(orient="records")
 
     except Exception as e:
         # print(f'Error retrieving weather data: {e}')
         return None
-    
+
 
 def save_to_excel(weather_data, lat, lng, processed_data):
     try:
         # Create a Pandas DataFrame from the weather data
         df = pd.DataFrame(weather_data)
         location = f"{lat}, {lng}"
-        df['location'] = location
+        df["location"] = location
 
         # Get the layer name from the DataFrame (assuming the first column is the layer name)
         layer_name = df.columns[0]
 
         # Define the file path where you want to save the Excel file based on the layer name
-        file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{layer_name}.xlsx'
+        file_path = f"/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{layer_name}.xlsx"
 
         # Save the DataFrame to an Excel file with improved error handling
         if os.path.exists(file_path):
@@ -132,61 +151,82 @@ def save_to_excel(weather_data, lat, lng, processed_data):
                 updated_df = pd.concat([existing_df, df], ignore_index=True)
                 updated_df.to_excel(file_path, index=False)
             except Exception as save_error:
-                logging.error(f'Error appending data to Excel file: {save_error}')
+                logging.error(f"Error appending data to Excel file: {save_error}")
         else:
             try:
                 # If the file does not exist, create a new file
                 df.to_excel(file_path, index=False)
             except Exception as save_error:
-                logging.error(f'Error creating new Excel file: {save_error}')
+                logging.error(f"Error creating new Excel file: {save_error}")
 
         # Update the processed_data dictionary
         if layer_name not in processed_data:
             processed_data[layer_name] = []
-        processed_data[layer_name].append({'lat': lat, 'lng': lng, 'location': location})
+        processed_data[layer_name].append(
+            {"lat": lat, "lng": lng, "location": location}
+        )
 
-        print(f'Data saved to Excel file: {file_path}')
+        print(f"Data saved to Excel file: {file_path}")
 
     except Exception as e:
-        logging.error(f'Error saving data to Excel: {e}')
+        logging.error(f"Error saving data to Excel: {e}")
         # You may choose to raise the exception or handle it in a way that suits your needs
 
 
 def seperate_excel_files():
-    excel_file_path = f'/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/date.xlsx'
+    excel_file_path = (
+        f"/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/date.xlsx"
+    )
     df = pd.read_excel(excel_file_path)
 
     file1 = df.iloc[:, [0, 1, -1]]
     file1["unit"] = "°C"
-    file1.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/temperature_2m.xlsx', index=False)
+    file1.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/temperature_2m.xlsx",
+        index=False,
+    )
 
     file2 = df.iloc[:, [0, 2, -1]]
     file2["unit"] = "%"
-    file2.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/relative_humidity_2m.xlsx', index=False)
-
+    file2.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/relative_humidity_2m.xlsx",
+        index=False,
+    )
 
     file3 = df.iloc[:, [0, 3, -1]]
     file3["unit"] = "°C"
-    file3.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/dew_point_2m.xlsx', index=False)
+    file3.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/dew_point_2m.xlsx",
+        index=False,
+    )
 
     file4 = df.iloc[:, [0, 4, -1]]
     file4["unit"] = "°C"
-    file4.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/apparent_temperature.xlsx', index=False)
+    file4.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/apparent_temperature.xlsx",
+        index=False,
+    )
 
     file5 = df.iloc[:, [0, 5, -1]]
     file5["unit"] = "mm"
-    file5.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/precipitation_probability.xlsx', index=False)
-
+    file5.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/precipitation_probability.xlsx",
+        index=False,
+    )
 
     file6 = df.iloc[:, [0, 6, -1]]
     file6["unit"] = "mm"
-    file6.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/precipitation.xlsx', index=False)
-
+    file6.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/precipitation.xlsx",
+        index=False,
+    )
 
     file7 = df.iloc[:, [0, 7, -1]]
     file7["unit"] = "mm"
-    file7.to_excel('/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/rain.xlsx', index=False)
-
+    file7.to_excel(
+        "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/rain.xlsx",
+        index=False,
+    )
 
 
 def save_to_database(weather_data, lat, lng):
@@ -194,7 +234,9 @@ def save_to_database(weather_data, lat, lng):
         # Iterate through the weather data and save entries to the database
         for entry in weather_data:
             for key, value in entry.items():
-                if key != 'date' and key != 'location':
-                    WeatherEntry.objects.create(layer_name=key, value=value, latitude=lat, longitude=lng)
+                if key != "date" and key != "location":
+                    WeatherEntry.objects.create(
+                        layer_name=key, value=value, latitude=lat, longitude=lng
+                    )
     except Exception as e:
-        logging.error(f'Error saving data to database: {e}')
+        logging.error(f"Error saving data to database: {e}")
