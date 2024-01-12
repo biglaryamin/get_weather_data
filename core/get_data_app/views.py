@@ -144,7 +144,7 @@ def save_to_excel(weather_data, lat, lng, processed_data):
         layer_name = df.columns[0]
 
         # Define the file path where you want to save the Excel file based on the layer name
-        file_path = f"/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/{layer_name}.xlsx"
+        file_path = "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/full_data.xlsx"
 
         # Save the DataFrame to an Excel file with improved error handling
         if os.path.exists(file_path):
@@ -169,7 +169,7 @@ def save_to_excel(weather_data, lat, lng, processed_data):
             {"lat": lat, "lng": lng, "location": location}
         )
 
-        print(f"Data saved to Excel file: {file_path}")
+        # print(f"Data saved to Excel file: {file_path}")
 
     except Exception as e:
         logging.error(f"Error saving data to Excel: {e}")
@@ -178,7 +178,7 @@ def save_to_excel(weather_data, lat, lng, processed_data):
 
 def seperate_excel_files():
     excel_file_path = (
-        f"/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/date.xlsx"
+        f"/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/full_data.xlsx"
     )
     df = pd.read_excel(excel_file_path)
 
