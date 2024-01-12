@@ -13,6 +13,7 @@ from rest_framework import status
 
 from tqdm import tqdm
 
+from geopy.distance import geodesic
 
 import logging
 
@@ -33,15 +34,17 @@ def handle_weather_request(request):
         return JsonResponse(data)
     elif request.method == "POST":
         received_data = request.data
-        print(f"************{received_data}***************")
         selected_locations = received_data.get("locations", [])
-        resolution = int(received_data.get("resolution", 5))  # Default resolution is 5 if not provided
+        distance_resolution = float(received_data.get("distance_resolution", 5.0))  # Default distance resolution is 5 km if not provided
         processed_data = {}
         received_lat = selected_locations[0].get("lat")
         received_lng = selected_locations[0].get("lng")
 
         received_lat1 = selected_locations[1].get("lat")
         received_lng1 = selected_locations[1].get("lng")
+
+        # Calculate the resolution based on distance in kilometers
+        resolution = calculate_resolution((received_lat, received_lng), (received_lat1, received_lng1), distance_resolution)
 
         # Create a tuple
         coordinate_tuple = (received_lat, received_lng)
@@ -71,13 +74,24 @@ def handle_weather_request(request):
 def generate_points(point1, point2, resolution):
     x_min, y_min = np.min([point1, point2], axis=0)
     x_max, y_max = np.max([point1, point2], axis=0)
-    x = np.linspace(x_min, x_max, resolution)
-    y = np.linspace(y_min, y_max, resolution)
+    x_distance = geodesic((x_min, y_min), (x_max, y_min)).kilometers
+    y_distance = geodesic((x_min, y_min), (x_min, y_max)).kilometers
+
+    x_steps = int(x_distance / resolution)
+    y_steps = int(y_distance / resolution)
+
+    x = np.linspace(x_min, x_max, x_steps)
+    y = np.linspace(y_min, y_max, y_steps)
 
     xv, yv = np.meshgrid(x, y)
     points = np.column_stack((xv.flatten(), yv.flatten()))
     return points
 
+
+def calculate_resolution(point1, point2, distance_resolution):
+    distance = geodesic(point1, point2).kilometers
+    resolution = distance_resolution / distance
+    return resolution
 
 def get_weather_data(lat, lng):
     try:

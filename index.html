@@ -18,7 +18,7 @@
 
   <!-- Add an input field for resolution -->
   <label for="resolution">Resolution:</label>
-  <input type="number" id="resolution" name="resolution" min="1" value="5">
+  <input type="number" id="resolution" name="resolution" step="0.1" min="0.1" value="5.0">
 
   <button onclick="sendPostRequest()">Send POST Request</button>
 
@@ -45,7 +45,6 @@
       // Add a marker to indicate the selected location
       L.marker([lat, lng]).addTo(map);
     });
-
 
     function sendPostRequest() {
       // Get the resolution from the input field
