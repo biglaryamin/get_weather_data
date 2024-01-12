@@ -32,19 +32,22 @@ def handle_weather_request(request):
         data = {"message": "Hello, World"}
         return JsonResponse(data)
     elif request.method == "POST":
-        received_data = request.data.get("locations", [])
+        received_data = request.data
+        print(f"************{received_data}***************")
+        selected_locations = received_data.get("locations", [])
+        resolution = int(received_data.get("resolution", 5))  # Default resolution is 5 if not provided
         processed_data = {}
-        received_lat = received_data[0].get("lat")
-        received_lng = received_data[0].get("lng")
+        received_lat = selected_locations[0].get("lat")
+        received_lng = selected_locations[0].get("lng")
 
-        received_lat1 = received_data[1].get("lat")
-        received_lng1 = received_data[1].get("lng")
+        received_lat1 = selected_locations[1].get("lat")
+        received_lng1 = selected_locations[1].get("lng")
 
         # Create a tuple
         coordinate_tuple = (received_lat, received_lng)
         coordinate_tuple1 = (received_lat1, received_lng1)
 
-        grid_points = generate_points(coordinate_tuple, coordinate_tuple1, 5)
+        grid_points = generate_points(coordinate_tuple, coordinate_tuple1, resolution)
 
         for lat, lng in tqdm(grid_points, desc="Fetching data", unit="location"):
             weather_data = get_weather_data(lat, lng)
