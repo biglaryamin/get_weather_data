@@ -29,6 +29,7 @@
   <script>
     var map = L.map('map').setView([0, 0], 2);
     var selectedLocations = [];
+    var square;
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
@@ -46,6 +47,29 @@
 
       // Add a marker to indicate the selected location
       L.marker([lat, lng]).addTo(map);
+
+      // Update the square between selected locations
+      if (square) {
+        map.removeLayer(square);
+      }
+      if (selectedLocations.length === 2) {
+        var lat1 = selectedLocations[0].lat;
+        var lng1 = selectedLocations[0].lng;
+        var lat2 = selectedLocations[1].lat;
+        var lng2 = selectedLocations[1].lng;
+
+        // Calculate square corners
+        var squareCorners = [
+          [lat1, lng1],
+          [lat1, lng2],
+          [lat2, lng2],
+          [lat2, lng1],
+          [lat1, lng1] // Close the square
+        ];
+
+        // Draw square
+        square = L.polygon(squareCorners, { color: 'yellow' }).addTo(map);
+      }
     });
 
     function sendPostRequest() {
