@@ -35,7 +35,7 @@ def handle_weather_request(request):
     elif request.method == "POST":
         received_data = request.data
         selected_locations = received_data.get("locations", [])
-        distance_resolution = float(received_data.get("distance_resolution", 5.0))  # Default distance resolution is 5 km if not provided
+        distance_resolution = float(received_data.get("resolution", 5.0))  # Default distance resolution is 5 km if not provided
         processed_data = {}
         received_lat = selected_locations[0].get("lat")
         received_lng = selected_locations[0].get("lng")
@@ -85,8 +85,14 @@ def generate_points(point1, point2, resolution):
 
     xv, yv = np.meshgrid(x, y)
     points = np.column_stack((xv.flatten(), yv.flatten()))
-    return points
 
+    # Save points to the specified file
+    file_path = "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/points.txt"
+    np.savetxt(file_path, points, delimiter=',')
+    # num_points = len(points)
+    # print(f"Total number of points generated: {num_points}")
+
+    return points
 
 def calculate_resolution(point1, point2, distance_resolution):
     distance = geodesic(point1, point2).kilometers
