@@ -1,11 +1,9 @@
 import openmeteo_requests
 import pandas as pd
-from pprint import pprint
 import numpy as np
 import os
 
 from django.http import JsonResponse
-from django.http import HttpResponse
 from .models import WeatherEntry
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -13,7 +11,7 @@ from rest_framework import status
 
 from tqdm import tqdm
 
-from geopy.distance import geodesic
+# from geopy.distance import geodesic
 
 import logging
 
@@ -44,13 +42,13 @@ def handle_weather_request(request):
         received_lng1 = selected_locations[1].get("lng")
 
         # Calculate the resolution based on distance in kilometers
-        resolution = calculate_resolution((received_lat, received_lng), (received_lat1, received_lng1), distance_resolution)
+        # resolution = calculate_resolution((received_lat, received_lng), (received_lat1, received_lng1), distance_resolution)
 
         # Create a tuple
         coordinate_tuple = (received_lat, received_lng)
         coordinate_tuple1 = (received_lat1, received_lng1)
 
-        grid_points = generate_points(coordinate_tuple, coordinate_tuple1, resolution)
+        grid_points = generate_points(coordinate_tuple, coordinate_tuple1, distance_resolution)
 
         for lat, lng in tqdm(grid_points, desc="Fetching data", unit="location"):
             weather_data = get_weather_data(lat, lng)
@@ -72,32 +70,17 @@ def handle_weather_request(request):
 
 
 def generate_points(point1, point2, resolution):
-    x_min, y_min = np.min([point1, point2], axis=0)
-    x_max, y_max = np.max([point1, point2], axis=0)
-    x_distance = geodesic((x_min, y_min), (x_max, y_min)).kilometers
-    y_distance = geodesic((x_min, y_min), (x_min, y_max)).kilometers
+    stepsize = resolution
+    lon_values = np.arange(point1[0], point2[0], stepsize)
+    lat_values = np.arange(point1[1], point2[1], stepsize)
 
-    x_steps = int(x_distance / resolution)
-    y_steps = int(y_distance / resolution)
+    coordinates = [(x, y) for x in lon_values for y in lat_values]
+    return coordinates
 
-    x = np.linspace(x_min, x_max, x_steps)
-    y = np.linspace(y_min, y_max, y_steps)
-
-    xv, yv = np.meshgrid(x, y)
-    points = np.column_stack((xv.flatten(), yv.flatten()))
-
-    # Save points to the specified file
-    file_path = "/home/mohammadamin/Desktop/openmeteo_crawler/get_weather_data/points.txt"
-    np.savetxt(file_path, points, delimiter=',')
-    # num_points = len(points)
-    # print(f"Total number of points generated: {num_points}")
-
-    return points
-
-def calculate_resolution(point1, point2, distance_resolution):
-    distance = geodesic(point1, point2).kilometers
-    resolution = distance_resolution / distance
-    return resolution
+# def calculate_resolution(point1, point2, distance_resolution):
+#     distance = geodesic(point1, point2).kilometers
+#     resolution = distance_resolution / distance
+#     return resolution
 
 def get_weather_data(lat, lng):
     try:
